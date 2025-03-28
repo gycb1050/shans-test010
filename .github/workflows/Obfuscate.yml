@@ -5,8 +5,8 @@ on:
     branches:
       - main
   schedule:
-        # Runs everyday at 1:00 AM
-        - cron: "0 1 * * *"
+    # Runs everyday at 1:00 AM
+    - cron: "0 1 * * *"
 
 permissions:
   contents: write
@@ -26,27 +26,31 @@ jobs:
 
       - name: Install dependencies
         run: |
+          # Install javascript-obfuscator globally
           npm install -g javascript-obfuscator
 
       - name: Clone BPB workjs
         run: |
+          # Download the unobfuscated worker.js from the GitHub repository
           wget -O origin.js https://raw.githubusercontent.com/bia-pain-bache/BPB-Worker-Panel/refs/heads/main/build/unobfuscated-worker.js
 
       - name: Obfuscate BPB worker js
         run: |
-          javascript-obfuscator origin.js --output _worker.js \
-          --compact true \
-          --control-flow-flattening true \
-          --control-flow-flattening-threshold 1 \
-          --dead-code-injection true \
-          --dead-code-injection-threshold 1 \
-          --identifier-names-generator hexadecimal \
-          --rename-globals true \
-          --string-array true \
-          --string-array-encoding 'rc4' \
-          --string-array-threshold 1 \
-          --transform-object-keys true \
-          --unicode-escape-sequence true
+          # Obfuscate the origin.js file with specific options
+          javascript-obfuscator origin.js \
+            --output _worker.js \
+            --compact true \
+            --control-flow-flattening true \
+            --control-flow-flattening-threshold 1 \
+            --dead-code-injection true \
+            --dead-code-injection-threshold 1 \
+            --identifier-names-generator hexadecimal \
+            --rename-globals true \
+            --string-array true \
+            --string-array-encoding 'rc4' \
+            --string-array-threshold 1 \
+            --transform-object-keys true \
+            --unicode-escape-sequence true
 
       - name: Commit changes
         uses: stefanzweifel/git-auto-commit-action@v5
@@ -55,3 +59,16 @@ jobs:
           commit_message: ':arrow_up: update latest bpb panel'
           commit_author: 'github-actions[bot] <github-actions[bot]@users.noreply.github.com>'
           push_options: '--set-upstream'
+
+      - name: Check if _worker.js exists
+        run: |
+          if [ -f _worker.js ]; then
+            echo "_worker.js exists"
+          else
+            echo "_worker.js does not exist"
+            exit 1
+          fi
+
+      - name: Deploy to Cloudflare
+        run: |
+          npx wrangler deploy _worker.js
